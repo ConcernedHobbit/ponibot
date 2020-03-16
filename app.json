@@ -1,0 +1,19 @@
+{
+  "name": "Ponibot",
+  "description": "Telegram bot for HEPPA listings",
+  "repository": "https://github.com/ConcernedHobbit/ponibot",
+  "env": {
+    "API_ID": {
+      "description": "Telegram API ID",
+      "value": ""
+    },
+    "API_HASH": {
+      "description": "Telegram API hash",
+      "value": ""
+    },
+    "BOT_TOKEN": {
+      "description": "Telegram bot token",
+      "value": ""
+    }
+  }
+}

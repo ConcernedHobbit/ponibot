@@ -1,0 +1,4 @@
+export-env.sh
+venv
+.env
+bot.session
