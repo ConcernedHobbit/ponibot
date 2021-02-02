@@ -1,12 +1,13 @@
 from telethon.sync import TelegramClient, events
 import os, re
 from urllib.request import urlopen
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer
+from bs4.diagnose import diagnose
 
 API_ID = os.environ.get('API_ID')
 API_HASH = os.environ.get('API_HASH')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-HEPPA = 'http://heppa.herokuapp.com/candidates'
+HEPPA = os.environ.get('HEPPA_URL')
 
 APPROVALS = "+" #u"\U0001F44D" # Unicode thumbs up
 VETOES = "❌ "    #u"\U0001F44E" # Unicode thumbs down
@@ -46,7 +47,7 @@ async def lead(event):
 
 @bot.on(events.NewMessage(pattern='(?i)/candidates'))
 async def candidates(event):
-    print("[+] Candidate listing requested")
+    print("[+] Candidate listing requested")
     candidates = parseHeppa()
     await event.respond(buildResponse(candidates), link_preview=False)
 
@@ -70,7 +71,10 @@ def buildResponse(candidates):
             res += f"**{APPROVALS}{candidate.approvals}** "
             if candidate.vetoes > 0:
                 res += f"** {VETOES}{candidate.vetoes} **"
-            res += f"[{candidate.name}]({candidate.link})"
+            if candidate.link:
+                res += f"[{candidate.name}]({candidate.link})"
+            else:
+                res += candidate.name
             res += "\n"
     else:
         res += '**No candidates**'
@@ -80,20 +84,28 @@ def buildResponse(candidates):
 def parseHeppa():
     res = urlopen(HEPPA)
     data = res.read()
-    soup = BeautifulSoup(data, 'html.parser')
+    soup = BeautifulSoup(data)
     candidates = []
 
-    for row in soup.find_all('tr'):
-        cols = row.find_all('td')
-        if cols:
-            name = cols[0].a.string
-            link = cols[0].a.get('href')
-            nominator = cols[1].string
-            tags = [n[1:-1] for n in cols[2].string[1:-1].split(', ')]
-            approvals = int(cols[3].string)
-            vetoers = [n[1:-1] for n in cols[5].string[1:-1].split(', ')]
-            candidates.append(Candidate(name, link, nominator, tags, approvals, vetoers))
-
+    # HTML parsing is messy. TODO: Edge cases, handling, all that.
+    try:
+        for row in soup.find_all('tr'):
+            cols = row.find_all('td')
+            if cols:
+                if cols[0].a:
+                    name = cols[0].a.string
+                    link = cols[0].a.get('href')
+                else:
+                    name = cols[0].string.strip()
+                    link = None
+                nominator = cols[1].string
+                tags = [n[1:-1] for n in cols[2].string[1:-1].split(', ')]
+                approvals = int(cols[3].string)
+                vetoers = [n[1:-1] for n in cols[5].string[1:-1].split(', ')]
+                candidates.append(Candidate(name, link, nominator, tags, approvals, vetoers))
+    except Exception as e:
+        print(f"[!] Error {e}")
+        
     return candidates
 
 class Candidate:
