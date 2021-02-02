@@ -2,3 +2,4 @@ export-env.sh
 venv
 .env
 bot.session
+bot.session-journal
